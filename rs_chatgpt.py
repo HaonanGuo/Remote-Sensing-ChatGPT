@@ -1,43 +1,23 @@
-# Licensed under the MIT License.
-# coding: utf-8
 import os
-import gradio as gr
 import random
 import torch
 import re
 import uuid
-from PIL import Image, ImageDraw, ImageOps, ImageFont
+from PIL import Image
 from skimage import io
 import argparse
 import inspect
 import time
-
 from transformers import pipeline, BlipProcessor, BlipForConditionalGeneration, BlipForQuestionAnswering
-
-from diffusers import StableDiffusionPipeline, StableDiffusionInpaintPipeline, StableDiffusionInstructPix2PixPipeline
-from diffusers import EulerAncestralDiscreteScheduler
-from diffusers import StableDiffusionControlNetPipeline, ControlNetModel, UniPCMultistepScheduler
-from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
-
-from controlnet_aux import OpenposeDetector, MLSDdetector, HEDdetector
 
 from langchain.agents.initialize import initialize_agent
 from langchain.agents.tools import Tool
 from langchain.chains.conversation.memory import ConversationBufferMemory
 from langchain.llms.openai import OpenAI
 
-# Grounding DINO
-import groundingdino.datasets.transforms as T
-from groundingdino.models import build_model
-from groundingdino.util.slconfig import SLConfig
-from groundingdino.util.utils import clean_state_dict, get_phrases_from_posmap
-
-# segment anything
-# from segment_anything import build_sam, SamPredictor, SamAutomaticMaskGenerator
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-import wget
+
 import torchvision
 import torch.nn.functional as F
 
