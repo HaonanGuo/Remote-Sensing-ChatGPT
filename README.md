@@ -1,19 +1,22 @@
 # RS-ChatGPT: Human-Interactive Remote Sensing Task Solving with ChatGPT
 Introduction
 ----
-Remote Sensing ChatGPT(RS-ChatGPT) is an open source tool for solving remote sensing tasks with ChatGPT in an interactive way.<br/>
-In Remote Sensing ChatGPT, ChatGPT acts as an expert to response to users' linguistic resquests based on the input remote sensing image.  <br/>
+Remote Sensing ChatGPT(RS-ChatGPT) is an open source tool for solving remote sensing tasks with ChatGPT in an interactive way.ChatGPT acts as an expert to response to users' linguistic resquests based on the input remote sensing image.  It supports various interpretation tasks that are trained on remote sensing datasets. To help ChatGPT better understand remote sensing knowledge, image captioning and scene understanding of remote sensing image are set as prefix.RS-ChatGPT is developed based on the Visual ChatGPT project.
 
-It includes four steps in implementation:
+Generally, RS-ChatGPT includes four steps in implementation:
 * Prompt Template Generation
 * Task Planning
 * Task Execution
 * Response Genration
+  
+
+Remote Sensing ChatGPT is an open source project that welcome any contribution and feedback. Please contact us with haonan.guo@whu.edu.cn
 
 Updates
 ----
 Initial release：2023.08.23
-
+* TODO: Provide an interactive interface
+  
 The code
 ----
 ### Requirements
@@ -39,4 +42,4 @@ Clone the repository:git clone [https://github.com/HaonanGuo/BFSeg-Efficient-Bui
 
 Help
 ----
-Any question? Please contact us with: haonan.guo@whu.edu.cn
+Remote Sensing ChatGPT is an open source project that welcome any contribution and feedback. Please contact us with: haonan.guo@whu.edu.cn
