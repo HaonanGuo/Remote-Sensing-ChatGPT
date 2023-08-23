@@ -107,61 +107,6 @@ def prompts(name, description):
     return decorator
 
 
-def blend_gt2pt(old_image, new_image, sigma=0.15, steps=100):
-    new_size = new_image.size
-    old_size = old_image.size
-    easy_img = np.array(new_image)
-    gt_img_array = np.array(old_image)
-    pos_w = (new_size[0] - old_size[0]) // 2
-    pos_h = (new_size[1] - old_size[1]) // 2
-
-    kernel_h = cv2.getGaussianKernel(old_size[1], old_size[1] * sigma)
-    kernel_w = cv2.getGaussianKernel(old_size[0], old_size[0] * sigma)
-    kernel = np.multiply(kernel_h, np.transpose(kernel_w))
-
-    kernel[steps:-steps, steps:-steps] = 1
-    kernel[:steps, :steps] = kernel[:steps, :steps] / kernel[steps - 1, steps - 1]
-    kernel[:steps, -steps:] = kernel[:steps, -steps:] / kernel[steps - 1, -(steps)]
-    kernel[-steps:, :steps] = kernel[-steps:, :steps] / kernel[-steps, steps - 1]
-    kernel[-steps:, -steps:] = kernel[-steps:, -steps:] / kernel[-steps, -steps]
-    kernel = np.expand_dims(kernel, 2)
-    kernel = np.repeat(kernel, 3, 2)
-
-    weight = np.linspace(0, 1, steps)
-    top = np.expand_dims(weight, 1)
-    top = np.repeat(top, old_size[0] - 2 * steps, 1)
-    top = np.expand_dims(top, 2)
-    top = np.repeat(top, 3, 2)
-
-    weight = np.linspace(1, 0, steps)
-    down = np.expand_dims(weight, 1)
-    down = np.repeat(down, old_size[0] - 2 * steps, 1)
-    down = np.expand_dims(down, 2)
-    down = np.repeat(down, 3, 2)
-
-    weight = np.linspace(0, 1, steps)
-    left = np.expand_dims(weight, 0)
-    left = np.repeat(left, old_size[1] - 2 * steps, 0)
-    left = np.expand_dims(left, 2)
-    left = np.repeat(left, 3, 2)
-
-    weight = np.linspace(1, 0, steps)
-    right = np.expand_dims(weight, 0)
-    right = np.repeat(right, old_size[1] - 2 * steps, 0)
-    right = np.expand_dims(right, 2)
-    right = np.repeat(right, 3, 2)
-
-    kernel[:steps, steps:-steps] = top
-    kernel[-steps:, steps:-steps] = down
-    kernel[steps:-steps, :steps] = left
-    kernel[steps:-steps, -steps:] = right
-
-    pt_gt_img = easy_img[pos_h:pos_h + old_size[1], pos_w:pos_w + old_size[0]]
-    gaussian_gt_img = kernel * gt_img_array + (1 - kernel) * pt_gt_img  # gt img with blur img
-    gaussian_gt_img = gaussian_gt_img.astype(np.int64)
-    easy_img[pos_h:pos_h + old_size[1], pos_w:pos_w + old_size[0]] = gaussian_gt_img
-    gaussian_img = Image.fromarray(easy_img)
-    return gaussian_img
 
 
 def cut_dialogue_history(history_memory, keep_last_n_words=500):
@@ -368,28 +313,6 @@ class LandUseClassfication:
         print(f"\nProcessed Landuse Classification, Input Image: {inputs}, Output SegMap: {updated_image_path}")
         return updated_image_path
 
-class VisualQuestionAnswering:
-    def __init__(self, device):
-        print(f"Initializing VisualQuestionAnswering to {device}")
-        self.torch_dtype = torch.float16 if 'cuda' in device else torch.float32
-        self.device = device
-        self.processor = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
-        self.model = BlipForQuestionAnswering.from_pretrained(
-            "Salesforce/blip-vqa-base", torch_dtype=self.torch_dtype).to(self.device)
-
-    @prompts(name="Answer Question About The Image",
-             description="useful when you need an answer for a question based on an image. "
-                         "like: what is the background color of the last image, how many cats in this figure, what is in this figure. "
-                         "The input to this tool should be a comma separated string of two, representing the image_path and the question")
-    def inference(self, inputs):
-        image_path, question = inputs.split(",")[0], ','.join(inputs.split(',')[1:])
-        raw_image = Image.open(image_path).convert('RGB')
-        inputs = self.processor(raw_image, question, return_tensors="pt").to(self.device, self.torch_dtype)
-        out = self.model.generate(**inputs)
-        answer = self.processor.decode(out[0], skip_special_tokens=True)
-        print(f"\nProcessed VisualQuestionAnswering, Input Image: {image_path}, Input Question: {question}, "
-              f"Output Answer: {answer}")
-        return answer
 
 class ObjectDetection:
     def __init__(self, device):
@@ -665,20 +588,16 @@ class RSChatGPT:
         return state
 
 if __name__ == '__main__':
-    # InstanceSegmentation('cuda:1').inference('/data/PublicData/AID/Viaduct/viaduct_420.jpg,Baseball')
-    # SceneClassification('cuda:1').inference('/data/PublicData/AID/Viaduct/viaduct_420.jpg')
-    # ObjectDetection('cuda:1').inference('/data/haonan.guo/WHU_BUILDING/val/image/val_1032.tif,Baseball')
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--load', type=str, default="ImageCaptioning_cuda:1,ObjectDetection_cuda:1,LandUseClassfication_cuda:1,InstanceSegmentation_cuda:1,SceneClassification_cuda:1,Image2Canny_cpu")#Segmenting_cuda:1
+    parser.add_argument('--load', type=str, default="ImageCaptioning_cuda:1,ObjectDetection_cuda:1,LandUseClassfication_cuda:1,InstanceSegmentation_cuda:1,SceneClassification_cuda:1,Image2Canny_cpu")
     args = parser.parse_args()
     state=[]
     load_dict = {e.split('_')[0].strip(): e.split('_')[1].strip() for e in args.load.split(',')}
     bot = RSChatGPT(load_dict=load_dict)
     bot.initialize()
-    txt='Classify the image'
-    img_path='/data/haonan.guo/WHU_BUILDING/val/image/val_1032.tif'
-    # bot.run_text(txt, state)
+    txt='How many planes are there in the image?'
+    img_path='/test.png'
     state=bot.run_image(img_path, state, txt)
 
 
