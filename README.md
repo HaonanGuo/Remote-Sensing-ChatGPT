@@ -40,6 +40,22 @@ Clone the repository:git clone [https://github.com/HaonanGuo/BFSeg-Efficient-Bui
 
  More funtions to be updated~
 
+### Citation
+
+Please cite the repo if you use the data or code in this repo.
+
+```
+@misc{RS-ChatGPT,
+  author = {Haonan Guo and Bo Du and Liangpei Zhang },
+  title = {RS-ChatGPT: Human-Interactive Remote Sensing Task Solving with ChatGPT},
+  year = {2023},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/HaonanGuo/Remote-Sensing-ChatGPT}},
+}
+```
+
+
 Help
 ----
 Remote Sensing ChatGPT is an open source project that welcome any contribution and feedback. Please contact us with: haonan.guo@whu.edu.cn
