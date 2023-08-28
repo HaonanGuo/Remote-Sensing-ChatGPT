@@ -21,7 +21,7 @@ The code
 Please Refer to [requirements.txt](https://github.com/HaonanGuo/Remote-Sensing-ChatGPT/blob/main/requirements.txt)
 
 ### Usage
-Clone the repository:git clone [https://github.com/HaonanGuo/BFSeg-Efficient-Building-Footprint-Segmentation-Framework.git](https://github.com/HaonanGuo/Remote-Sensing-ChatGPT)<br/>
+Clone the repository:git clone https://github.com/HaonanGuo/Remote-Sensing-ChatGPT<br/>
 
 ->Run [rs_chatgpt.py](https://github.com/HaonanGuo/Remote-Sensing-ChatGPT/blob/main/rs_chatgpt.py) 
 
