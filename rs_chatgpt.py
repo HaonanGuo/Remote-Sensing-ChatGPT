@@ -596,5 +596,5 @@ if __name__ == '__main__':
     print('RSChatGPT initialization done, you can now chat with RSChatGPT~')
 
     while 1:
-        txt = input('You can now input your question?(e.g. How many planes are there in the image?)\n')[0]
+        txt = input('You can now input your question?(e.g. How many planes are there in the image?)\n')
         state = bot.run_text(txt,state)
