@@ -1,5 +1,7 @@
 import os
 import random
+
+import openai
 import torch
 import re
 import uuid
@@ -20,7 +22,6 @@ import numpy as np
 
 import torchvision
 import torch.nn.functional as F
-
 
 RS_CHATGPT_PREFIX = """Remote Sensing ChatGPT is designed to assist with a wide range of remote sensing image related tasks, from answering simple questions to providing in-depth explanations and discussions on a wide range of remote sensing applications. Remote Sensing ChatGPT is able to generate human-like text based on the input it receives, allowing it to engage in natural-sounding conversations and provide responses that are coherent and relevant to the topic at hand.
 
@@ -67,16 +68,7 @@ The thoughts and observations are only visible for Remote Sensing ChatGPT, Remot
 Thought: Do I need to use a tool? {agent_scratchpad} Let's think step by step.
 """
 
-def seed_everything(seed):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    return seed
-
 os.makedirs('image', exist_ok=True)
-
-
 
 def prompts(name, description):
     def decorator(func):
@@ -85,24 +77,6 @@ def prompts(name, description):
         return func
 
     return decorator
-
-
-
-
-def cut_dialogue_history(history_memory, keep_last_n_words=500):
-    if history_memory is None or len(history_memory) == 0:
-        return history_memory
-    tokens = history_memory.split()
-    n_tokens = len(tokens)
-    print(f"history_memory:{history_memory}, n_tokens: {n_tokens}")
-    if n_tokens < keep_last_n_words:
-        return history_memory
-    paragraphs = history_memory.split('\n')
-    last_n_tokens = n_tokens
-    while last_n_tokens >= keep_last_n_words:
-        last_n_tokens -= len(paragraphs[0].split(' '))
-        paragraphs = paragraphs[1:]
-    return '\n' + '\n'.join(paragraphs)
 
 
 def get_new_image_name(org_img_name, func_name="update"):
@@ -117,9 +91,9 @@ def get_new_image_name(org_img_name, func_name="update"):
         assert len(name_split) == 4
         most_org_file_name = name_split[3]
     recent_prev_file_name = name_split[0]
-    new_file_name = f'{this_new_uuid}_{func_name}_{recent_prev_file_name}_{most_org_file_name}.png'
-    return os.path.join(head, new_file_name)
 
+    new_file_name = f'{this_new_uuid}_{func_name}_{recent_prev_file_name}.png'.replace('__','_')
+    return os.path.join(head, new_file_name)
 
 
 class Image2Canny:
@@ -145,6 +119,7 @@ class Image2Canny:
         print(f"\nProcessed Image2Canny, Input Image: {inputs}, Output Text: {updated_image_path}")
         return updated_image_path
 
+
 class ObjectCounting:
     def __init__(self, device):
         from ObjectDetection.models.common import DetectMultiBackend
@@ -156,14 +131,12 @@ class ObjectCounting:
                          'soccer ball field', 'tennis court', 'swimming pool', 'baseball diamond', 'roundabout',
                          'basketball court', 'bridge', 'helicopter']
 
-
     @prompts(name="Count object",
              description="useful when you want to the number of the certain object in the remote sensing image. "
                          "like: count the number of bridges, or how many planes are there in the image, "
                          "or perform vehicle on this image. "
                          "The input to this tool should be a comma separated string of two, "
-                        "representing the image_path, the text description of the object to be found")
-
+                         "representing the image_path, the text description of the object to be found")
     def inference(self, inputs):
         image_path, det_prompt = inputs.split(",")
         image = torch.from_numpy(io.imread(image_path))
@@ -185,25 +158,27 @@ class ObjectCounting:
                 if (detection_classes == i).sum() > 0:
                     log_text += str((detection_classes == i).sum()) + ' ' + self.category[i] + ','
             log_text = log_text[:-1] + ' detected.'
-        log_text=log_text+' 0 objects detected for other categories.'
+        log_text = log_text + ' 0 objects detected for other categories.'
         print(f"\nProcessed Object Counting, Input Image: {inputs}, Output text: {log_text}")
         return log_text
+
 
 class InstanceSegmentation:
     def __init__(self, device):
         print("Initializing InstanceSegmentation")
         from InstanceSegmentation.model import SwinUPer
         self.model = SwinUPer()
-        self.device=device
+        self.device = device
         trained = torch.load('./checkpoints/last_swint_upernet_finetune.pth')
         self.model.load_state_dict(trained["state_dict"])
         self.model = self.model.to(device)
         self.model.eval()
-        self.mean, self.std = torch.tensor([123.675, 116.28 , 103.53]).reshape((1, 3, 1, 1)), torch.tensor(
-            [58.395, 57.12 , 57.375]).reshape((1, 3, 1, 1))
-        self.all_dict={'plane': 1,'ship': 2,'storage tank': 3, 'baseball diamond': 4,'tennis court': 5,
-         'basketball court': 6,'ground track field': 7,'harbor': 8,'bridge': 9,
-         'large vehicle': 10,'small vehicle': 11,'helicopter': 12,'roundabout': 13,'soccer ball field': 14,'swimming pool': 15}
+        self.mean, self.std = torch.tensor([123.675, 116.28, 103.53]).reshape((1, 3, 1, 1)), torch.tensor(
+            [58.395, 57.12, 57.375]).reshape((1, 3, 1, 1))
+        self.all_dict = {'plane': 1, 'ship': 2, 'storage tank': 3, 'baseball diamond': 4, 'tennis court': 5,
+                         'basketball court': 6, 'ground track field': 7, 'harbor': 8, 'bridge': 9,
+                         'large vehicle': 10, 'small vehicle': 11, 'helicopter': 12, 'roundabout': 13,
+                         'soccer ball field': 14, 'swimming pool': 15}
 
     @prompts(name="Instance Segmentation for Remote Sensing Image",
              description="useful when you want to apply man-made instance segmentation for the image. The expected input category include plane, ship, storage tank, baseball diamond, tennis court, basketball court, ground track field, harbor, bridge, vehicle, helicopter, roundabout, soccer ball field, and swimming pool."
@@ -217,29 +192,33 @@ class InstanceSegmentation:
         image = (image.permute(2, 0, 1).unsqueeze(0) - self.mean) / self.std
         with torch.no_grad():
             pred = self.model(image.to(self.device))
-        pred= pred.argmax(1).cpu().squeeze().int().numpy()
-        pred = Image.fromarray(np.stack([pred,pred,pred],-1).astype(np.uint8))
-        updated_image_path = get_new_image_name(image_path, func_name="instance_"+det_prompt)
+        pred = pred.argmax(1).cpu().squeeze().int().numpy()
+        pred = Image.fromarray(np.stack([pred, pred, pred], -1).astype(np.uint8))
+        updated_image_path = get_new_image_name(image_path, func_name="instance_" + det_prompt)
         pred.save(updated_image_path)
         print(f"\nProcessed Instance Segmentation, Input Image: {inputs}, Output SegMap: {updated_image_path}")
         return updated_image_path
+
 
 class SceneClassification:
     def __init__(self, device):
         print("Initializing SceneClassification")
         from torchvision import models
-        self.model = models.resnet34(pretrained=False,num_classes=30)
-        self.device=device
+        self.model = models.resnet34(pretrained=False, num_classes=30)
+        self.device = device
         trained = torch.load('./checkpoints/Res34_AID_best.pth')
         self.model.load_state_dict(trained)
         self.model = self.model.to(device)
         self.model.eval()
-        self.mean, self.std = torch.tensor([123.675, 116.28 , 103.53]).reshape((1, 3, 1, 1)), torch.tensor(
-            [58.395, 57.12 , 57.375]).reshape((1, 3, 1, 1))
-        self.all_dict={'Bridge': 0,'MediumResidential': 1,'Park': 2,'Stadium': 3,'Church': 4, 'DenseResidential': 5,'Farmland': 6,
-             'River': 7,'School': 8,'SparseResidential': 9,'Viaduct': 10,'Beach': 11,'Forest': 12,'BaseballField': 13,'Desert': 14,'BareLand': 15,
-             'RailwayStation': 16,'Center': 17,'Industrial': 18,'Meadow': 19,'Airport': 20,'StorageTanks': 21,'Pond': 22,'Commercial': 23, 'Resort': 24,
-             'Parking': 25,'Port': 26,'Square': 27,'Mountain': 28, 'Playground': 29}
+        self.mean, self.std = torch.tensor([123.675, 116.28, 103.53]).reshape((1, 3, 1, 1)), torch.tensor(
+            [58.395, 57.12, 57.375]).reshape((1, 3, 1, 1))
+        self.all_dict = {'Bridge': 0, 'MediumResidential': 1, 'Park': 2, 'Stadium': 3, 'Church': 4,
+                         'DenseResidential': 5, 'Farmland': 6,
+                         'River': 7, 'School': 8, 'SparseResidential': 9, 'Viaduct': 10, 'Beach': 11, 'Forest': 12,
+                         'BaseballField': 13, 'Desert': 14, 'BareLand': 15,
+                         'RailwayStation': 16, 'Center': 17, 'Industrial': 18, 'Meadow': 19, 'Airport': 20,
+                         'StorageTanks': 21, 'Pond': 22, 'Commercial': 23, 'Resort': 24,
+                         'Parking': 25, 'Port': 26, 'Square': 27, 'Mountain': 28, 'Playground': 29}
 
     @prompts(name="Scene Classification for Remote Sensing Image",
              description="useful when you want to know the type of scene or function for the image. "
@@ -253,18 +232,23 @@ class SceneClassification:
         with torch.no_grad():
             pred = self.model(image.to(self.device))
         # pred= pred.argmax(1).cpu().squeeze().int().numpy()
-        values, indices = torch.softmax(pred,1).topk(2, dim=1, largest=True, sorted=True)
-        output_txt=image_path+' has '+str(torch.round(values[0][0]*10000).item()/100)+'% probability being '+list(self.all_dict.keys())[indices[0][0]]+' and '+str(torch.round(values[0][1]*10000).item()/100)+'% probability being '+list(self.all_dict.keys())[indices[0][1]]
+        values, indices = torch.softmax(pred, 1).topk(2, dim=1, largest=True, sorted=True)
+        output_txt = image_path + ' has ' + str(
+            torch.round(values[0][0] * 10000).item() / 100) + '% probability being ' + list(self.all_dict.keys())[
+                         indices[0][0]] + ' and ' + str(
+            torch.round(values[0][1] * 10000).item() / 100) + '% probability being ' + list(self.all_dict.keys())[
+                         indices[0][1]]+'.'
 
         print(f"\nProcessed Scene Classification, Input Image: {inputs}, Output Scene: {output_txt}")
         return output_txt
 
-class LandUseClassfication:
+
+class LandUseSegmentation:
     def __init__(self, device):
-        print("Initializing LandUseClassfication")
+        print("Initializing LandUseSegmentation")
         from LandUseClassification.seg_hrnet import HRNet48
         self.model = HRNet48()
-        self.device=device
+        self.device = device
         trained = torch.load('./checkpoints/HRNET_LoveDA_best.pth')
         # rename = {k.replace('backbone.', 'model.').replace('decode_head.', 'model.'): v for k, v in
         #           trained['state_dict'].items()}
@@ -274,8 +258,8 @@ class LandUseClassfication:
         self.mean, self.std = torch.tensor([123.675, 116.28, 103.53]).reshape((1, 3, 1, 1)), torch.tensor(
             [58.395, 57.12, 57.375]).reshape((1, 3, 1, 1))
 
-    @prompts(name="Land Use Classification for Remote Sensing Image",
-             description="useful when you want to apply land use clssification for the image. The expected input category include Lnad Use, Building, Road, Water, Barren, Forest, and Architecture."
+    @prompts(name="Land Use Segmentation for Remote Sensing Image",
+             description="useful when you want to apply land use gegmentation for the image. The expected input category include Lnad Use, Building, Road, Water, Barren, Forest, and Architecture."
                          "like: generate land use map from this image, "
                          "or predict the land use on this image, or extract building from this image, segment roads from this image, Extract the water bodies in the image. "
                          "The input to this tool should be a comma separated string of two, "
@@ -286,8 +270,8 @@ class LandUseClassfication:
         image = (image.permute(2, 0, 1).unsqueeze(0) - self.mean) / self.std
         with torch.no_grad():
             pred = self.model(image.to(self.device))
-        pred= pred.argmax(1).cpu().squeeze().int().numpy()
-        pred = Image.fromarray(np.stack([pred,pred,pred],-1).astype(np.uint8))
+        pred = pred.argmax(1).cpu().squeeze().int().numpy()
+        pred = Image.fromarray(np.stack([pred, pred, pred], -1).astype(np.uint8))
         updated_image_path = get_new_image_name(image_path, func_name="landuse")
         pred.save(updated_image_path)
         print(f"\nProcessed Landuse Classification, Input Image: {inputs}, Output SegMap: {updated_image_path}")
@@ -296,15 +280,16 @@ class LandUseClassfication:
 
 class ObjectDetection:
     def __init__(self, device):
-        self.device=device
-        # self.llm = OpenAI(temperature=0)
+        self.device = device
         from ObjectDetection.models.common import DetectMultiBackend
         self.model = DetectMultiBackend('./checkpoints/yolov5_best.pt', device=torch.device(device), dnn=False,
-                                   data='dota_data/dota_name.yaml', fp16=False)
+                                        data='dota_data/dota_name.yaml', fp16=False)
 
-        self.category = ['small vehicle', 'large vehicle', 'plane', 'storage tank', 'ship', 'harbor', 'ground track field',
-                    'soccer ball field', 'tennis court', 'swimming pool', 'baseball diamond', 'roundabout',
-                    'basketball court', 'bridge', 'helicopter']
+        self.category = ['small vehicle', 'large vehicle', 'plane', 'storage tank', 'ship', 'harbor',
+                         'ground track field',
+                         'soccer ball field', 'tennis court', 'swimming pool', 'baseball diamond', 'roundabout',
+                         'basketball court', 'bridge', 'helicopter']
+
     @prompts(name="Detect the given object",
              description="useful when you only want to detect the bounding box of the certain objects in the picture"
                          "according to the given text"
@@ -312,36 +297,51 @@ class ObjectDetection:
                          "or can you detect an object for me, or can you locate an object for me."
                          "The input to this tool should be a comma separated string of two, "
                          "representing the image_path, the text description of the object to be found")
+
     def inference(self, inputs):
         image_path, det_prompt = inputs.split(",")
         image = torch.from_numpy(io.imread(image_path))
-        image = image.permute(2, 0, 1).unsqueeze(0)  / 255.0
-        _,_,h,w=image.shape
+        image = image.permute(2, 0, 1).unsqueeze(0) / 255.0
+        _, _, h, w = image.shape
         with torch.no_grad():
-            out, _ = self.model(F.interpolate(image.to(self.device),size=(640,640),mode='bilinear'), augment=False, val=True)
-            predn = self.non_max_suppression(out, conf_thres=0.001, iou_thres=0.75, labels=[], multi_label=True, agnostic=False)[0]
-            detections = predn.clone().cpu()
+            out, _ = self.model(image.to(self.device), augment=False,val=True)
+            predn = self.non_max_suppression(out, conf_thres=0.001, iou_thres=0.75, labels=[], multi_label=True,
+                                             agnostic=False)[0]
+            detections = predn.clone()
             detections = detections[predn[:, 4] > 0.75]
-            detections_box = (detections[:, :4]/(640/h)).int().numpy()
-            detection_classes = detections[:, 5].int().numpy()
-        if len(detection_classes)>0:
-            det=np.zeros((h,w,3))
+            detections_box = (detections[:, :4] / (640 / h)).int().cpu().numpy()
+            detection_classes = detections[:, 5].int().cpu().numpy()
+        if len(detection_classes) > 0:
+
+            det = np.zeros((h, w, 3))
             for i in range(len(detections_box)):
-                x1, y1, x2, y2=detections_box[i]
-                det[y1:y2,x1:x2]=detection_classes[i]+1
-            log_text='Results:'
+                x1, y1, x2, y2 = detections_box[i]
+                det[y1:y2, x1:x2] = detection_classes[i] + 1
+            log_text = 'Results:'
             for i in range(len(self.category)):
                 if (detection_classes == i).sum() > 0:
-                    log_text+=str((detection_classes == i).sum())+' '+self.category[i]+','
-            log_text=log_text[:-1]+' detected.'
-            updated_image_path = get_new_image_name(image_path, func_name="detection_"+det_prompt.replace(' ','_'))
-
-            pred = Image.fromarray(det).astype(np.uint8).save(updated_image_path)
-            pred.save(updated_image_path)
-            print(f"\nProcessed Object Detection, Input Image: {inputs}, Output Bounding box: {updated_image_path},Output text: {log_text}")
-            return updated_image_path+','+log_text
-
-    def non_max_suppression(self,prediction,
+                    log_text += str((detection_classes == i).sum()) + ' ' + self.category[i] + ','
+            log_text = log_text[:-1] + ' detected.'
+            updated_image_path = get_new_image_name(image_path, func_name="detection_" + det_prompt.replace(' ', '_'))
+            self.visualize(image_path,updated_image_path,detections)
+            # pred = Image.fromarray(det).astype(np.uint8).save(updated_image_path)
+            # pred.save(updated_image_path)
+            print(
+                f"\nProcessed Object Detection, Input Image: {inputs}, Output Bounding box: {updated_image_path},Output text: {log_text}")
+            return updated_image_path + ',' + log_text
+    def visualize(self,image_path, newpic_path,detections):
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        im = io.imread(image_path)
+        boxes = detections.int().cpu().numpy()
+        for i in range(len(boxes)):
+            cv2.rectangle(im, (boxes[i][0], boxes[i][1]), (boxes[i][2], boxes[i][3]), (0, 255, 255), 2)
+            cv2.rectangle(im, (boxes[i][0], boxes[i][1] - 15), (boxes[i][0] + 45, boxes[i][1] - 2), (0, 0, 255),thickness=-1)
+            cv2.putText(im, self.category[boxes[i][-1]], (boxes[i][0], boxes[i][1] - 2), font, 0.5, (255, 255, 255),1)
+        Image.fromarray(im.astype(np.uint8)).save(newpic_path)
+        with open(newpic_path[:-4]+'.txt','w') as f:
+            for i in range(len(boxes)):
+                f.write(str(list(boxes[i,:4]))[1:-1]+', '+self.category[boxes[i][-1]]+'\n')
+    def non_max_suppression(self, prediction,
                             conf_thres=0.25,
                             iou_thres=0.45,
                             classes=None,
@@ -473,6 +473,7 @@ class ObjectDetection:
 
         return output
 
+
 class ImageCaptioning:
     def __init__(self, device):
         print(f"Initializing ImageCaptioning to {device}")
@@ -488,15 +489,15 @@ class ImageCaptioning:
     def inference(self, image_path):
         inputs = self.processor(Image.open(image_path), return_tensors="pt").to(self.device, self.torch_dtype)
         out = self.model.generate(**inputs)
-        captions = 'A satellite image of '+self.processor.decode(out[0], skip_special_tokens=True)
+        captions = 'A satellite image of ' + self.processor.decode(out[0], skip_special_tokens=True)
         print(f"\nProcessed ImageCaptioning, Input Image: {image_path}, Output Text: {captions}")
         return captions
 
 class RSChatGPT:
-    def __init__(self, load_dict):
+    def __init__(self, gpt_name,load_dict,openai_key):
         # load_dict = {'VisualQuestionAnswering':'cuda:0', 'ImageCaptioning':'cuda:1',...}
         print(f"Initializing RSChatGPT, load_dict={load_dict}")
-        if 'ImageCaptioning' not in load_dict:
+        if 'ImageCaptioning' not in load_dict or 'SceneClassification' not in load_dict:
             raise ValueError("You have to load ImageCaptioning as a basic function for RSChatGPT")
 
         self.models = {}
@@ -507,12 +508,13 @@ class RSChatGPT:
         # Load Template Foundation Models
         for class_name, module in globals().items():
             if getattr(module, 'template_model', False):
-                template_required_names = {k for k in inspect.signature(module.__init__).parameters.keys() if k!='self'}
+                template_required_names = {k for k in inspect.signature(module.__init__).parameters.keys() if
+                                           k != 'self'}
                 loaded_names = set([type(e).__name__ for e in self.models.values()])
                 if template_required_names.issubset(loaded_names):
                     self.models[class_name] = globals()[class_name](
                         **{name: self.models[name] for name in template_required_names})
-        
+
         print(f"All the Available Functions: {self.models}")
 
         self.tools = []
@@ -521,11 +523,11 @@ class RSChatGPT:
                 if e.startswith('inference'):
                     func = getattr(instance, e)
                     self.tools.append(Tool(name=func.name, description=func.description, func=func))
-        self.llm = OpenAI(temperature=0)
+        self.llm = OpenAI(model_name=gpt_name,temperature=0,openai_api_key=openai_key)
         self.memory = ConversationBufferMemory(memory_key="chat_history", output_key='output')
 
     def initialize(self):
-        self.memory.clear() #clear previous history
+        self.memory.clear()  # clear previous history
         PREFIX, FORMAT_INSTRUCTIONS, SUFFIX = RS_CHATGPT_PREFIX, RS_CHATGPT_FORMAT_INSTRUCTIONS, RS_CHATGPT_SUFFIX
         self.agent = initialize_agent(
             self.tools,
@@ -537,7 +539,6 @@ class RSChatGPT:
             agent_kwargs={'prefix': PREFIX, 'format_instructions': FORMAT_INSTRUCTIONS,
                           'suffix': SUFFIX}, )
 
-
     def run_text(self, text, state):
         res = self.agent({"input": text.strip()})
         res['output'] = res['output'].replace("\\", "/")
@@ -546,17 +547,27 @@ class RSChatGPT:
         print(f"\nProcessed run_text, Input text: {text}\nCurrent state: {state}\n"
               f"Current Memory: {self.agent.memory.buffer}")
         return state
-
-    def run_image(self, image_dir, state, txt=None):
+    def init_image(self, image_dir, state):
         image_filename = os.path.join('image', f"{str(uuid.uuid4())[:8]}.png")
-        print("======>Auto Resize Image...")
         img = io.imread(image_dir)
-        io.imsave(image_filename,img)
+        width, height = img.shape[1],img.shape[0]
+        ratio = min(640 / width, 640 / height)
+        if ratio<1:
+            width_new, height_new = (round(width * ratio), round(height * ratio))
+        else:
+            width_new, height_new =width,height
+        width_new = int(np.round(width_new / 64.0)) * 64
+        height_new = int(np.round(height_new / 64.0)) * 64
 
-        description = self.models['ImageCaptioning'].inference(image_filename)
-
-
-        Human_prompt = f' Provide a remote sensing image named {image_filename}. The description is: {description}. This information helps you to understand this image, but you should use tools to finish following tasks, rather than directly imagine from my description. If you understand, say \"Received\".'
+        if width_new!=width or height_new!=height:
+            img = cv2.resize(img,(width_new, height_new))
+            print(f"======>Auto Resizing Image from {height,width} to {height_new,width_new}...")
+        else:
+            print(f"======>Auto Renaming Image...")
+        io.imsave(image_filename, img.astype(np.uint8))
+        scene_prior = self.models['SceneClassification'].inference(image_filename)
+        caption_prior = self.models['ImageCaptioning'].inference(image_filename)
+        Human_prompt = f' Provide a remote sensing image named {image_filename}.The description is: {caption_prior}. {scene_prior} This information helps you to understand this image, but you should use tools to finish following tasks, rather than directly imagine from my description. If you understand, say \"Received\".'
         AI_prompt = "Received."
         self.memory.chat_memory.add_user_message(Human_prompt)
         self.memory.chat_memory.add_ai_message(AI_prompt)
@@ -564,20 +575,26 @@ class RSChatGPT:
         state = state + [(f"![](file={image_filename})*{image_filename}*", AI_prompt)]
         print(f"\nProcessed run_image, Input image: {image_filename}\nCurrent state: {state}\n"
               f"Current Memory: {self.agent.memory.buffer}")
-        state=self.run_text(f'{txt} {image_filename} ', state)
         return state
 
+
+
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser()
-    parser.add_argument('--load', type=str, default="ImageCaptioning_cuda:1,ObjectDetection_cuda:1,LandUseClassfication_cuda:1,InstanceSegmentation_cuda:1,SceneClassification_cuda:1,Image2Canny_cpu")
+    parser.add_argument('openai-key', type=str)
+    parser.add_argument('--image-dir', type=str)
+    parser.add_argument('--gpt_name', type=str, default="gpt-3.5-turbo",choices=['gpt-3.5-turbo','gpt-4'])
+    parser.add_argument('--load', type=str,help='Image Captioning and Scene Classification are basic models that are required. You can select from [ObjectDetection,LandUseSegmentation,InstanceSegmentation,Image2Canny]',
+                        default="ImageCaptioning_cuda:0,SceneClassification_cuda:0,ObjectDetection_cuda:0,LandUseSegmentation_cuda:0,InstanceSegmentation_cuda:0,SceneClassification_cuda:0,Image2Canny_cpu")
+    #,ObjectDetection_cuda:0,LandUseClassfication_cuda:0,InstanceSegmentation_cuda:0,SceneClassification_cuda:0,Image2Canny_cpu
     args = parser.parse_args()
-    state=[]
+    state = []
     load_dict = {e.split('_')[0].strip(): e.split('_')[1].strip() for e in args.load.split(',')}
-    bot = RSChatGPT(load_dict=load_dict)
+    bot = RSChatGPT(gpt_name=args.gpt_name,load_dict=load_dict,openai_key=args.openai_key)
     bot.initialize()
-    txt='How many planes are there in the image?'
-    img_path='/test.png'
-    state=bot.run_image(img_path, state, txt)
+    state=bot.init_image(args.image_dir,state)
+    print('RSChatGPT initialization done, you can now chat with RSChatGPT~')
 
-
+    while 1:
+        txt = input('You can now input your question?(e.g. How many planes are there in the image?)\n')[0]
+        state = bot.run_text(txt,state)
