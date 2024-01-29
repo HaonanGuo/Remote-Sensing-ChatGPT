@@ -1,0 +1,1 @@
+from RStask.ImageCaptioning.blip import BLIP as CaptionFunction
