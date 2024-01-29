@@ -581,7 +581,7 @@ class RSChatGPT:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('openai-key', type=str)
+    parser.add_argument('openai_key', type=str)
     parser.add_argument('--image-dir', type=str,default="./test_image.png")
     parser.add_argument('--gpt_name', type=str, default="gpt-3.5-turbo",choices=['gpt-3.5-turbo','gpt-4'])
     parser.add_argument('--load', type=str,help='Image Captioning and Scene Classification are basic models that are required. You can select from [ObjectDetection,LandUseSegmentation,InstanceSegmentation,Image2Canny]',

@@ -5,4 +5,4 @@ imageio
 numpy
 openai
 opencv-python
-skimage
+scikit-image
