@@ -35,9 +35,9 @@ The code
 Please Refer to [requirements.txt](https://github.com/HaonanGuo/Remote-Sensing-ChatGPT/blob/main/requirements.txt)
 
 ### Usage
-Clone the repository:git clone https://github.com/HaonanGuo/Remote-Sensing-ChatGPT<br/>
-->Download the below models and place them in the checkpoints folder
-->Run [RSChatGPT-shell]([https://github.com/HaonanGuo/Remote-Sensing-ChatGPT/blob/main/rs_chatgpt.py](https://github.com/HaonanGuo/Remote-Sensing-ChatGPT/blob/main/RSChatGPT-shell.py)) 
+->Clone the repository:git clone https://github.com/HaonanGuo/Remote-Sensing-ChatGPT<br/>
+->Download the below models and place them in the checkpoints folder<br/>
+->Run [RSChatGPT-shell.py](https://github.com/HaonanGuo/Remote-Sensing-ChatGPT/blob/main/RSChatGPT-shell.py) 
 
 ### Supported Function
 | Function |    Description  | Method | Pretrain Dataset     | Model Weights     |
@@ -47,7 +47,7 @@ Clone the repository:git clone https://github.com/HaonanGuo/Remote-Sensing-ChatG
 | Object Detection | Detect RS object from image | [YOLO v5](https://zenodo.org/badge/latestdoi/264818686) | [DOTA](http://captain.whu.edu.cn/DOTAweb)| [weight(Google)](https://drive.google.com/file/d/1Hb7XA6gZxNam8y8nxs2p6EqJ-XaG1o5Y/view?usp=drive_link) [weight(Baidu)](https://pan.baidu.com/s/1XTG-MLxx5_D0OO6M80OP1A?pwd=RSGP) |
 | Instance Segmentation | Extract Instance Mask of certain object | [SwinTransformer+UperNet](https://github.com/open-mmlab/mmsegmentation) | [iSAID](https://captain-whu.github.io/iSAID/index)| [weight(Google)](https://drive.google.com/file/d/165jeD0oi6fSpvWrpgfVBbzUOsyHN0xEq/view?usp=drive_link) [weight(Baidu)](https://pan.baidu.com/s/1Tv6BCt68L2deY_wMVZizgg?pwd=RSGP)|
 | Landuse Classification | Extract Pixel-wise Landuse Classification | [HRNet](https://github.com/HRNet) | [LoveDA](https://github.com/Junjue-Wang/LoveDA)| [weight(Google)](https://drive.google.com/file/d/1fRyEpb7344S4Y5F2Q4EBO3fXVT4kXaft/view?usp=drive_link) [weight(Baidu)](https://pan.baidu.com/s/1m6yOXbT6cKGqJ64z86u7fQ?pwd=RSGP) |
-| Object Counting | Count the number of certain object in an image | [SwinTransformer+UperNet](https://github.com/open-mmlab/mmsegmentation) | [iSAID](https://captain-whu.github.io/iSAID/index)| [weight(Google)](https://drive.google.com/file/d/165jeD0oi6fSpvWrpgfVBbzUOsyHN0xEq/view?usp=drive_link) [weight(Baidu)](https://pan.baidu.com/s/1Tv6BCt68L2deY_wMVZizgg?pwd=RSGP)|
+| Object Counting | Count the number of certain object in an image | [YOLO v5](https://zenodo.org/badge/latestdoi/264818686) | [DOTA](http://captain.whu.edu.cn/DOTAweb)| Same as Object Detection |
 | Edge Detection | Extract edge of remote sensing image | Canny |None| None |
 
  More funtions to be updated~
