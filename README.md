@@ -1,18 +1,26 @@
 # RS-ChatGPT: Human-Interactive Remote Sensing Task Solving with ChatGPT
 Introduction
 ----
-Remote Sensing ChatGPT(RS-ChatGPT) is an open source tool for solving remote sensing tasks with ChatGPT in an interactive way.ChatGPT acts as an expert to response to users' linguistic resquests based on the input remote sensing image.  It supports various interpretation tasks that are trained on remote sensing datasets. To help ChatGPT better understand remote sensing knowledge, image captioning and scene understanding of remote sensing image are set as prefix.RS-ChatGPT is developed based on the Visual ChatGPT project.
+Remote Sensing ChatGPT(RS-ChatGPT) is an open source tool for solving remote sensing tasks with ChatGPT in an interactive way.ChatGPT acts as an expert to response to users' linguistic resquests based on the input remote sensing image.  It supports various interpretation tasks that are trained on remote sensing datasets. To help ChatGPT better understand remote sensing knowledge, remote sensing image captioning is set as cue to help ChatGPT understand remote sensing image.
 
 Generally, RS-ChatGPT includes four steps in implementation:
 * Prompt Template Generation
 * Task Planning
 * Task Execution
 * Response Genration
-  
+
+Our article is now available in [arXiv!](https://arxiv.org/abs/2401.09083) See you in IGARSS204, Greece!<br/>
+My personal website is also avalable:[www.poleguo98.top](https://www.poleguo98.top)
+
 
 Updates
 ----
-* TODO: Some functions to be optimized(better model & better response to GPT).<br/>
+* TODO1: An online website is comming! Let's use RS-ChatGPT Online!<br/>
+* TODO2: What about asking RS-CHatGPT to choose different models within the given task?<br/>
+* TODO3: Put all the models available in Huggingface<br/>
+
+2024.01.30: <br/>
+* Remote Sensing GPT is updated, with bugs fixed, more readable, and more scalable~<br/>
 
 2023.09.19: <br/>
 * Remote Sensing GPT now supports GPT-4 and multi-round chating! An interactive interface is now available(see interface.py)~<br/>
@@ -28,8 +36,8 @@ Please Refer to [requirements.txt](https://github.com/HaonanGuo/Remote-Sensing-C
 
 ### Usage
 Clone the repository:git clone https://github.com/HaonanGuo/Remote-Sensing-ChatGPT<br/>
-
-->Run [rs_chatgpt.py](https://github.com/HaonanGuo/Remote-Sensing-ChatGPT/blob/main/rs_chatgpt.py) 
+->Download the below models and place them in the checkpoints folder
+->Run [RSChatGPT-shell]([https://github.com/HaonanGuo/Remote-Sensing-ChatGPT/blob/main/rs_chatgpt.py](https://github.com/HaonanGuo/Remote-Sensing-ChatGPT/blob/main/RSChatGPT-shell.py)) 
 
 ### Supported Function
 | Function |    Description  | Method | Pretrain Dataset     | Model Weights     |
@@ -49,14 +57,14 @@ Clone the repository:git clone https://github.com/HaonanGuo/Remote-Sensing-ChatG
 Please cite the repo if you use the data or code in this repo.
 
 ```
-@misc{RS-ChatGPT,
-  author = {Haonan Guo and Bo Du and Liangpei Zhang },
-  title = {RS-ChatGPT: Human-Interactive Remote Sensing Task Solving with ChatGPT},
-  year = {2023},
-  publisher = {GitHub},
-  journal = {GitHub repository},
-  howpublished = {\url{https://github.com/HaonanGuo/Remote-Sensing-ChatGPT}},
+@article{RS ChatGPT,
+	title = {Remote Sensing ChatGPT: Solving Remote Sensing Tasks with ChatGPT and Visual Models},
+	shorttitle = {Remote Sensing ChatGPT},
+	doi = {10.48550/ARXIV.2401.09083},
+	author = {Guo, Haonan and Su, Xin and Wu, Chen and Du, Bo and Zhang, Liangpei and Li, Deren},
+	year = {2024},
 }
+
 ```
 
 ## Acknowledgments
