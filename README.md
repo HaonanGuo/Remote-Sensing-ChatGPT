@@ -1,7 +1,7 @@
 # RS-ChatGPT: Solving Remote Sensing Tasks with ChatGPT and Visual Models
 Introduction
 ----
-Remote Sensing ChatGPT(RS-ChatGPT) is an open source tool for solving remote sensing tasks with ChatGPT in an interactive way.ChatGPT acts as an expert to response to users' linguistic resquests based on the input remote sensing image.  It supports various interpretation tasks that are trained on remote sensing datasets. To help ChatGPT better understand remote sensing knowledge, remote sensing image captioning is set as cue to help ChatGPT understand remote sensing image.
+Remote Sensing ChatGPT(RS-ChatGPT) is an open source tool for solving remote sensing tasks with ChatGPT in an interactive way.ChatGPT acts as an expert to response to users' linguistic resquests based on the input remote sensing image.  It supports various interpretation tasks that are trained on remote sensing datasets. To help ChatGPT better understand remote sensing knowledge, remote sensing image captioning is set as cue to help ChatGPT understand remote sensing image.We will keep updating RS-CHatGPT~ Please comments with Issues or send me a email if you have any suggestions! Thanks in advance!
 
 Generally, RS-ChatGPT includes four steps in implementation:
 * Prompt Template Generation
